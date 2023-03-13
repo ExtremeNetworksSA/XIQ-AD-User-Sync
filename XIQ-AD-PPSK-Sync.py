@@ -531,7 +531,7 @@ def main():
                             print(log_msg)
                         else:
                             log_msg = f"User {email} - {pcg_id} was not successfully deleted from pcg group {policy_name}. User cannot be deleted from the PPSK Group."
-                            logging.info(log_msg)
+                            logging.error(log_msg)
                             print(log_msg)
                             error_msg = error_msg + log_msg + '\n'
                             ppsk_del_error+=1
@@ -560,7 +560,7 @@ def main():
                     print(log_msg)
                 else:
                     log_msg = f"User {email} - {userid} did not successfully delete from the PPSK Group."
-                    logging.info(log_msg)
+                    logging.error(log_msg)
                     print(log_msg)
                     error_msg = error_msg + log_msg + '\n'
                     ppsk_del_error+=1
@@ -586,6 +586,7 @@ def main():
         log_msg = "No users will be deleted from XIQ because of the error(s) in reading ldap users"
         logging.warning(log_msg)
         print(log_msg)
+        error_msg = error_msg + log_msg + '\n'
 
     if error_msg:
          
