@@ -4,12 +4,19 @@ import requests
 import sys
 import os
 import logging
+import smtplib,ssl
 from ldap3 import Server, Connection, ALL, NTLM, SUBTREE
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email.utils import formatdate
+from email import encoders
+
 ####################################
 # written by:   Tim Smith
 # e-mail:       tismith@extremenetworks.com
-# date:         15 June 2022
-# version:      2.0.6.1
+# date:         13 March 2023
+# version:      2.0.6.2 - Adding Email support
 ####################################
 
 
@@ -46,7 +53,15 @@ PCG_Maping = {
     }
 }
 
+# SMTP Settings
+tolist = ["email address","mulitple seperated by commas"] 
+sender_email = 'sender email address'
+email_subject = 'XIQ AD PPSK Sync Report'
+smtp_server = 'Outgoing Email (SMTP) server'
+smtp_port = 25
 
+
+error_msg = ''
 
 #-------------------------
 # logging
@@ -62,6 +77,44 @@ ldap_disable_codes = ['514','642','66050','66178']
 
 URL = "https://api.extremecloudiq.com"
 headers = {"Accept": "application/json", "Content-Type": "application/json"}
+
+
+def sendmail(fromaddr, toaddr, email_body, email_subject, smtpsrv, smtpport):
+		# Build the email
+		toHeader = ", ".join(toaddr)
+		msg = MIMEText(email_body)
+		msg['Subject'] = email_subject
+		msg['From'] = fromaddr
+		msg['To'] = toHeader
+
+		try:
+				# The actual mail send
+				server = smtplib.SMTP(smtpsrv, smtpport)
+				server.ehlo()
+				server.sendmail(fromaddr, toaddr, msg.as_string())
+				server.quit()
+				#debug_print "email sent: %s" % fromaddr
+
+		except Exception as e:
+				logmsg = "Something went wrong when sending the email {}".format(fromaddr)
+				logging.error(logmsg)
+				logging.error(e)
+				raise TypeError(f"{logmsg}\n   {e}")
+
+def sendErrorMsg(msg):
+    global error_msg
+    email_msg = error_msg + '\n' + msg
+    print(email_msg)
+    print("sending email")
+    try:
+        sendmail(sender_email, tolist , email_msg, email_subject, smtp_server, smtp_port)
+    except TypeError as e:
+        logging.error(e)
+        print(e)        
+    print("email sent")
+    print("script exiting....")
+    raise SystemExit
+    
 
 
 def retrieveADUsers(ad_group):
@@ -103,8 +156,7 @@ def retrieveADUsers(ad_group):
         log_msg = f"Unable to reach server {server_name}"
         logging.error(log_msg)
         print(log_msg)
-        print("script exiting....")
-        raise SystemExit
+        sendErrorMsg(log_msg)
     
 
 
@@ -134,10 +186,10 @@ def getAccessToken(XIQ_username, XIQ_password):
         raise TypeError(log_msg)
 
 
-def createPPSKuser(name,mail, usergroupID):
+def createPPSKuser(name,user_name, mail, usergroupID):
     url = URL + "/endusers"
 
-    payload = json.dumps({"user_group_id": usergroupID ,"name": name,"user_name": name,"password": "", "email_address": mail, "email_password_delivery": mail})
+    payload = json.dumps({"user_group_id": usergroupID ,"name": name,"user_name": user_name,"password": "", "email_address": mail, "email_password_delivery": mail})
 
     response = requests.post(url, headers=headers, data=payload, verify=True)
     if response is None:
@@ -270,17 +322,18 @@ def deletePCGUsers(policy_id, userId):
 
 
 def main():
+    global error_msg
     if 'XIQ_token' not in globals():
         try:
             login = getAccessToken(XIQ_username, XIQ_password)
         except TypeError as e:
             print(e)
-            raise SystemExit
+            sendErrorMsg(e)
         except:
             log_msg = "Unknown Error: Failed to generate token"
             logging.error(log_msg)
             print(log_msg)
-            raise SystemExit     
+            sendErrorMsg(log_msg)     
     else:
         headers["Authorization"] = "Bearer " + XIQ_token
  
@@ -293,16 +346,14 @@ def main():
             ppsk_users += retrievePPSKUsers(100,usergroupID)
         except TypeError as e:
             print(e)
-            print("script exiting....")
             # not having ppsk will break later line - if not any(d['name'] == name for d in ppsk_users):
-            raise SystemExit
+            sendErrorMsg(str(e))
         except:
             log_msg = ("Unknown Error: Failed to retrieve users from XIQ")
             logging.error(log_msg)
             print(log_msg)
-            print("script exiting....")
             # not having ppsk will break later line - if not any(d['name'] == name for d in ppsk_users):
-            raise SystemExit
+            sendErrorMsg(log_msg)
     log_msg = ("Successfully parsed " + str(len(ppsk_users)) + " XIQ users")
     logging.info(log_msg)
     print(f"{log_msg}\n")
@@ -325,6 +376,7 @@ def main():
                     log_msg = (f"Unexpected error: {sys.exc_info()[0]}")
                     logging.error(log_msg)
                     print(log_msg)
+                    error_msg = error_msg + log_msg + '\n'
                     logging.warning("User info was not captured from Active Directory")
                     logging.warning(f"{ldap_entry}")
                     # not having ppsk will break later line - for name, details in ldap_users.items():
@@ -350,19 +402,22 @@ def main():
             log_msg = (f"User {name} doesn't have an email set and will not be created in xiq")
             logging.warning(log_msg)
             print(log_msg)
+            error_msg = error_msg + log_msg + '\n'
             continue
-        if not any(d['user_name'] == name for d in ppsk_users) and not any(d == details['userAccountControl'] for d in ldap_disable_codes):
+        if not any(d['user_name'] == details['username'] for d in ppsk_users) and not any(d == details['userAccountControl'] for d in ldap_disable_codes):
             try:
-                user_created = createPPSKuser(name, details["email"], details['xiq_role'])
+                user_created = createPPSKuser(name, details['username'], details["email"], details['xiq_role'])
             except TypeError as e:
                 log_msg = f"failed to create {name}: {e}"
                 logging.error(log_msg)
                 print(log_msg)
+                error_msg = error_msg + log_msg + '\n'
                 ppsk_create_error+=1
             except:
                 log_msg = f"Unknown Error: Failed to create user {name} - {details['email']}"
                 logging.error(log_msg)
                 print(log_msg)
+                error_msg = error_msg + log_msg + '\n'
                 ppsk_create_error+=1
             if PCG_Enable == True and user_created == True and str(details['xiq_role']) in PCG_Maping:
                 ## add user to PCG if PCG is Enabled
@@ -377,11 +432,13 @@ def main():
                     log_msg = f"failed to add {name} to pcg {policy_name}: {e}"
                     logging.error(log_msg)
                     print(log_msg)
+                    error_msg = error_msg + log_msg + '\n'
                     pcg_create_error+=1
                 except:
                     log_msg = f"Unknown Error: Failed to add user {name} - {details['email']} to pcg {policy_name}"
                     logging.error(log_msg)
                     print(log_msg)
+                    error_msg = error_msg + log_msg + '\n'
                     pcg_create_error+=1
                 if result == 'Success':
                     log_msg = f"User {name} - was successfully add to pcg {policy_name}."
@@ -408,12 +465,14 @@ def main():
                 PCGUsers += retrievePCGUsers(policy_id)
             except TypeError as e:
                 print(e)
+                error_msg = error_msg + log_msg + '\n'
                 pcg_capture_success = False
                 # not having ppsk will break later line - if not any(d['name'] == name for d in ppsk_users):
             except:
                 log_msg = ("Unknown Error: Failed to retrieve users from XIQ")
                 logging.error(log_msg)
                 print(log_msg)
+                error_msg = error_msg + log_msg + '\n'
                 pcg_capture_success = False
                 # not having ppsk will break later line - if not any(d['name'] == name for d in ppsk_users):
 
@@ -433,6 +492,7 @@ def main():
                         log_msg = f"Due to PCG read failure, user {email} cannot be deleted"
                         logging.error(log_msg)
                         print(log_msg)
+                        error_msg = error_msg + log_msg + '\n'
                         ppsk_del_error+=1
                         pcg_del_error+=1
                         continue
@@ -453,6 +513,7 @@ def main():
                             logmsg = f"Failed to delete user {email} from PCG group {policy_name} with error {e}"
                             logging.error(logmsg)
                             print(logmsg)
+                            error_msg = error_msg + log_msg + '\n'
                             ppsk_del_error+=1
                             pcg_del_error+=1
                             continue
@@ -460,6 +521,7 @@ def main():
                             log_msg = f"Unknown Error: Failed to delete user {email} from pcg group {policy_name}"
                             logging.error(log_msg)
                             print(log_msg)
+                            error_msg = error_msg + log_msg + '\n'
                             ppsk_del_error+=1
                             pcg_del_error+=1
                             continue
@@ -471,6 +533,7 @@ def main():
                             log_msg = f"User {email} - {pcg_id} was not successfully deleted from pcg group {policy_name}. User cannot be deleted from the PPSK Group."
                             logging.info(log_msg)
                             print(log_msg)
+                            error_msg = error_msg + log_msg + '\n'
                             ppsk_del_error+=1
                             pcg_del_error+=1 
                             continue
@@ -481,12 +544,14 @@ def main():
                     logmsg = f"Failed to delete user {email}  with error {e}"
                     logging.error(logmsg)
                     print(logmsg)
+                    error_msg = error_msg + log_msg + '\n'
                     ppsk_del_error+=1
                     continue
                 except:
                     log_msg = f"Unknown Error: Failed to delete user {email} "
                     logging.error(log_msg)
                     print(log_msg)
+                    error_msg = error_msg + log_msg + '\n'
                     ppsk_del_error+=1
                     continue
                 if result == 'Success':
@@ -497,6 +562,7 @@ def main():
                     log_msg = f"User {email} - {userid} did not successfully delete from the PPSK Group."
                     logging.info(log_msg)
                     print(log_msg)
+                    error_msg = error_msg + log_msg + '\n'
                     ppsk_del_error+=1
 
         if ppsk_create_error:
@@ -520,6 +586,17 @@ def main():
         log_msg = "No users will be deleted from XIQ because of the error(s) in reading ldap users"
         logging.warning(log_msg)
         print(log_msg)
+
+    if error_msg:
+         
+        print("sending email")
+
+        try:
+            sendmail(sender_email, tolist , error_msg, email_subject, smtp_server, smtp_port)
+        except TypeError as e:
+            logging.error(e)
+            print(e)        
+        print("email sent")
 
 
 if __name__ == '__main__':
