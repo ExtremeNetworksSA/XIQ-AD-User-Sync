@@ -15,8 +15,12 @@ from email import encoders
 ####################################
 # written by:   Tim Smith
 # e-mail:       tismith@extremenetworks.com
-# date:         13 March 2023
-# version:      2.0.6.2 - Adding Email support
+# date:         1 July 2024
+# version:      2.0.7.1 
+# branch:       snakedogipa
+#               - Adding Email support
+#               - sAMAAccountName instead of username and password
+#               - additional error code 546, 66082
 ####################################
 
 
@@ -73,7 +77,7 @@ logging.basicConfig(
     format= '%(asctime)s: %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'
 )
 # userAccountControl codes used for disabled accounts
-ldap_disable_codes = ['514','642','66050','66178']
+ldap_disable_codes = ['514','546','642','66050','66178','66082']
 
 URL = "https://api.extremecloudiq.com"
 headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -364,12 +368,13 @@ def main():
     for ad_group, xiq_user_role in group_roles:
         ad_result = retrieveADUsers(ad_group)
         for ldap_entry in ad_result:
-            if str(ldap_entry.name) not in ldap_users:
+            if str(ldap_entry.sAMAccountName) not in ldap_users:
                 try:
-                    ldap_users[str(ldap_entry.name)] = {
+                    ldap_users[str(ldap_entry.sAMAccountName)] = {
                         "userAccountControl": str(ldap_entry.userAccountControl),
                         "email": str(ldap_entry.mail),
                         "username": str(ldap_entry.sAMAccountName),
+                        "name": str(ldap_entry.name),
                         "xiq_role": xiq_user_role
                     }
                 except:
@@ -382,6 +387,11 @@ def main():
                     # not having ppsk will break later line - for name, details in ldap_users.items():
                     ldap_capture_success = False
                     continue
+            else:
+                log_msg = (f"User {ldap_entry.sAMAccountName} already exists in data, skipping user")
+                logging.warning(log_msg)
+                logging.info(f"{ldap_entry}")
+                error_msg = error_msg + log_msg + '\n'
 
 
     log_msg = "Successfully parsed " + str(len(ldap_users)) + " LDAP users"
@@ -406,15 +416,15 @@ def main():
             continue
         if not any(d['user_name'] == details['username'] for d in ppsk_users) and not any(d == details['userAccountControl'] for d in ldap_disable_codes):
             try:
-                user_created = createPPSKuser(name, details['username'], details["email"], details['xiq_role'])
+                user_created = createPPSKuser(details['name'], details['username'], details["email"], details['xiq_role'])
             except TypeError as e:
-                log_msg = f"failed to create {name}: {e}"
+                log_msg = f"failed to create {details['username']}: {e}"
                 logging.error(log_msg)
                 print(log_msg)
                 error_msg = error_msg + log_msg + '\n'
                 ppsk_create_error+=1
             except:
-                log_msg = f"Unknown Error: Failed to create user {name} - {details['email']}"
+                log_msg = f"Unknown Error: Failed to create user {details['username']} - {details['email']}"
                 logging.error(log_msg)
                 print(log_msg)
                 error_msg = error_msg + log_msg + '\n'
@@ -427,21 +437,21 @@ def main():
                 email = details["email"]
                 result = ''
                 try:
-                    result = addUserToPcg(policy_id, name, email, user_group_name)
+                    result = addUserToPcg(policy_id, details['username'], email, user_group_name)
                 except TypeError as e:
-                    log_msg = f"failed to add {name} to pcg {policy_name}: {e}"
+                    log_msg = f"failed to add {details['username']} to pcg {policy_name}: {e}"
                     logging.error(log_msg)
                     print(log_msg)
                     error_msg = error_msg + log_msg + '\n'
                     pcg_create_error+=1
                 except:
-                    log_msg = f"Unknown Error: Failed to add user {name} - {details['email']} to pcg {policy_name}"
+                    log_msg = f"Unknown Error: Failed to add user {details['username']} - {details['email']} to pcg {policy_name}"
                     logging.error(log_msg)
                     print(log_msg)
                     error_msg = error_msg + log_msg + '\n'
                     pcg_create_error+=1
                 if result == 'Success':
-                    log_msg = f"User {name} - was successfully add to pcg {policy_name}."
+                    log_msg = f"User {details['username']} - was successfully add to pcg {policy_name}."
                     logging.info(log_msg)
                     print(log_msg)
                     pcg_create_error+=1
