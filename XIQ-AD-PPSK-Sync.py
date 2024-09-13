@@ -60,6 +60,7 @@ PCG_Maping = {
 
 # Set to True if you are using Local Database for PPSK - this will enable additional name filters and device config push that is needed or local Database PPSK
 Local_PPSK_DB = True
+mismatch_stop = True
 # Network Policy ID - needed for Local DataBase PPSK - to only deploy config to devices that are part of that network policy
 network_policy_id = 0
 
@@ -468,7 +469,7 @@ def main():
     ListOfADgroups, ListOfXIQUserGroups = zip(*group_roles)
     
     # if local database is used, check for existing mismatched devices before preceeding
-    if Local_PPSK_DB:
+    if Local_PPSK_DB and mismatch_stop:
         # Check for mismatched devices
         try:
             mismatched_devices = collectMismatchDevices()
@@ -528,6 +529,8 @@ def main():
                         ldap_name = ldap_name.replace("'","")
                         ldap_name = ldap_name.replace("`","")
                         ldap_name = ldap_name.replace("\\","")
+                        if len(ldap_name) > 32:
+                            ldap_name = ldap_name[:32]
                     else:
                         ldap_name = str(ldap_entry.name)
                     ldap_users[str(ldap_name)] = {
