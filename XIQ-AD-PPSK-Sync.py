@@ -281,12 +281,12 @@ def addUserToPcg(policy_id, name, email, user_group_name):
         log_msg = f"- no response!"
         logging.error(log_msg)
         raise TypeError(log_msg)
-    elif response.status_code != 202:
+    elif response.status_code != 200:
         log_msg = f"HTTP Status Code: {str(response.status_code)}"
         logging.error(log_msg)
         logging.warning(f"\t\t{response}")
         raise TypeError(log_msg)
-    elif response.status_code == 202:
+    elif response.status_code == 200:
         return 'Success'
 
 def retrievePCGUsers(policy_id):
