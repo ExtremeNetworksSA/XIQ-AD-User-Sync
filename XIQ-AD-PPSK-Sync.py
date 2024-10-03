@@ -15,8 +15,8 @@ from email import encoders
 ####################################
 # written by:   Tim Smith
 # e-mail:       tismith@extremenetworks.com
-# date:         1 July 2024
-# version:      2.0.7.1 
+# date:         3 Oct 2024
+# version:      2.0.7.2 
 # branch:       snakedogipa
 #               - Adding Email support
 #               - sAMAAccountName instead of username and password
