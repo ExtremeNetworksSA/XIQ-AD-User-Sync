@@ -15,8 +15,8 @@ from email import encoders
 ####################################
 # written by:   Tim Smith
 # e-mail:       tismith@extremenetworks.com
-# date:         28 Aug 2024
-# version:      2.1.1.1a
+# date:         3 Oct 2024
+# version:      2.1.1.2
 # branch:       Local_DB
 #               - Adding Email support
 #               - Remove apostrophe from user name - CLI issue for local DB
