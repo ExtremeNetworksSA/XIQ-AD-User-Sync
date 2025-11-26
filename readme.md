@@ -1,5 +1,3 @@
-# PCG API Script Notice – Release 25r3
-
 _The software is provided as-is and [Extreme Networks](http://www.extremenetworks.com/) has no obligation to provide maintenance, support, updates, enhancements, or modifications. Any support provided by [Extreme Networks](http://www.extremenetworks.com/) is at its sole discretion._
 
 _Issues and/or bug fixes may be reported on in the Issues for this repository._
@@ -10,28 +8,35 @@ The **25r3 release** has introduced **pagination** to the PCG API, aligning it w
 
 #### ⚠️ Current Known Issue (Under Investigation)
 
-**When PCG is enabled**, customers are currently experiencing significant slowness when creating or deleting PCG users.  
+**When PCG is enabled**, customers are currently experiencing significant slowness when creating or deleting PCG users due to backend processing delays.  
 This issue **only affects environments where PCG is enabled** and does **not** occur when PCG is disabled.
 
-**Specific impact on user deletion**  
-When deleting a user, the script attempts to delete the PCG user first and then immediately delete the associated PPSK user.  
-Because of the current backend slowness with PCG user deletion, the PCG delete may still be in progress when the script attempts the PPSK delete → this causes the PPSK deletion to fail with an error.
+**Updates to mitigate slowness and deletion timeouts**  
+To address this, the updated script (v3.0.0) now uses batch import and batch delete operations for PCG users when PCG is enabled. We've also added automatic retries—up to 10 attempts— for delete operations before skipping affected users. This should resolve most failures without manual intervention.
 
-**Recommended workaround for deletion failures**  
-Simply re-run the script after waiting a short time. By the second run, the PCG user deletion will have completed, and the script will successfully delete the remaining PPSK user(s) without error.
+**Specific impact on user deletion**
+In previous versions, deleting a user could fail if the PCG deletion was still processing when the script attempted the associated PPSK deletion. With v3.0.0's retries and batch handling, these scenarios are significantly reduced, though rare timeouts may still occur.
 
 Our engineering team is actively investigating the root cause of the slowness and working on a permanent fix. We’ll keep you updated on progress and resolution timeline.
 
-#### What the Pagination Change Means for You
-
-If you're using an older script to interact with the PCG API, **it will no longer work correctly** with the 25r3 release.
-
 #### Required Action
 
-The updated script (**v2.1.0**) is now available and supports pagination. To ensure uninterrupted functionality:
+The updated script (**v3.0.0**) is now available and supports pagination. To ensure uninterrupted functionality:
 
-1. **Download v2.1.0**: Get the new script version from the API portal or repository.
+1. **Download v3.0.0**: Get the new script version from the API portal or repository.
 2. **Copy Variables**: Transfer your existing variables (e.g., API keys, endpoints) from your old script to the new v2.1.0 script.
 3. **Test Your Script**: Verify that the updated script retrieves all users as expected with the new pagination logic.
 
 Thank you for your patience while we resolve the performance issue with PCG user create/delete operations.
+
+
+#### Release Notes
+v3.0.0 is a major update to the script. In addition to the PCG Batch changes other changes where made. There is a new **/app/** folder with 2 scripts included that must be in the same folder with the main **XIQ-AD-PPSK-Sync.py** script. 
+##### Other Changes
+1. **logging**: additional logging has been added. 
+a. Main logging function moved to logger.py script in app folder
+b. logs will be saved to XIQ-AD-PPSK-sync.log file in an automatically created 'script_logs' folder inside of the app folder
+c. log rotation added - logs will rotate at 5GB and backup up to 5 files.
+2. **XIQ APIs**: the APIs have been moved out of the main script and into the xiq_api.py script inside of the app folder.
+
+
