@@ -12,8 +12,8 @@ logger = logging.getLogger('XIQ-AD-PPSK_Sync.Main')
 ####################################
 # written by:   Tim Smith
 # e-mail:       tismith@extremenetworks.com
-# date:         28 Aug 2025
-# version:      3.0.0
+# date:         21 Jan 2026
+# version:      3.0.1
 ####################################
 
 
@@ -34,7 +34,7 @@ pageSize = 100
 #XIQ_username = "enter your ExtremeCloudIQ Username"
 #XIQ_password = "enter your ExtremeCLoudIQ password"
 ####OR###
-## TOKEN permission needs - enduser, pcg:key
+## TOKEN permission needs - enduser, pcg:key, lro
 XIQ_token = "****"
 
 group_roles = [
