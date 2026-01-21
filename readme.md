@@ -14,14 +14,15 @@ Our engineering team is actively investigating the root cause and working on a p
 **For PCG-enabled environments:** Use the updated script from the PCG-Bulk branch at https://github.com/ExtremeNetworksSA/XIQ-AD-User-Sync/tree/PCG-Bulk. This branch includes batch import/delete operations and retry logic to mitigate timeouts (up to 10 attempts before skipping users).
 
 **Required Action**
-The updated script (v3.0.0) is now available in the PCG-Bulk branch and includes bulk PCG support. 
+The updated script (v3.0.1) is now available in the PCG-Bulk branch and includes bulk PCG support. 
 
 To ensure uninterrupted functionality:
 
-Download v3.0.0: Get the new script version from the PCG-Bulk branch if using PCG.
+Download v3.0.1: Get the new script version from the PCG-Bulk branch if using PCG.
 * This is a new version of the script. all files should be replaced with the new files and follow the new documentation included in the branch.
 
-Copy Variables: Transfer your existing variables (e.g., API keys, endpoints) from your old script to the new version.
+Copy Variables: Transfer your existing variables (e.g., endpoints) from your old script to the new version.
+Generate a new token: A new token will need to be generated to include the lro permission for the long-running operation
 Test Your Script: Verify that the updated script retrieves all users as expected with the new pagination logic.
 
 
