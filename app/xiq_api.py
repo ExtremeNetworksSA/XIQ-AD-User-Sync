@@ -125,10 +125,10 @@ class XIQ:
             except json.JSONDecodeError:
                 logger.warning(f"\t\t{rawResponse.text}")
             else:
+                logging.warning(f"Full error details: {data}")
                 if 'error_message' in data:
-                    logger.warning(f"\t\t{data['error_message']}")
-                else:
-                    logger.warning(f"\n\n{data}")
+                    logging.warning(f"Error message from XIQ: {data['error_message']}")
+
             raise APICallFailedException(log_msg) 
         try:
             data = rawResponse.json()
