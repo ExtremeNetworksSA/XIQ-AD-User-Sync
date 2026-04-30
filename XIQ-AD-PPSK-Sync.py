@@ -15,12 +15,15 @@ from email import encoders
 ####################################
 # written by:   Tim Smith
 # e-mail:       tismith@extremenetworks.com
-# date:         3 Oct 2024
-# version:      2.1.1.2
+# date:         30 April 2026
+# version:      2.1.1.3
 # branch:       Local_DB
+#           2.1.1.2 - 2024-10-3 
 #               - Adding Email support
 #               - Remove apostrophe from user name - CLI issue for local DB
 #               - Delta Push Config for local DB
+#           2.1.1.3 - 2026-04-30
+#               - removed unneeded parameters from config push API call
 ####################################
 ####################################
 
