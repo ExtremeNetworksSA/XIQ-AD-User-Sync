@@ -298,7 +298,6 @@ def configPushToDevices(device_id_list):
     }
     })
     response = requests.post(url, headers=headers, data=payload, verify=True)
-    # wait 60 seconds
     if response is None:
         log_msg = "Error Error Deploying config to devices in XI XIQ - no response!"
         logging.error(log_msg)
@@ -309,6 +308,7 @@ def configPushToDevices(device_id_list):
         logging.warning(f"\t\t{response.json()}")
         log_msg += json.dumps(response.json())
         raise TypeError(log_msg)
+    # wait 60 seconds
     wait_time = 60
     print(f"waiting {wait_time} seconds for configuration push to start.")
     time.sleep(wait_time)
