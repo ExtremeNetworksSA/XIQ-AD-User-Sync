@@ -287,14 +287,9 @@ def configPushToDevices(device_id_list):
     },
     "policy": {
         "enable_complete_configuration_update": False,
-        "firmware_upgrade_policy": {
-        "enable_enforce_upgrade": False,
-        "enable_distributed_upgrade": False
-        },
         "firmware_activate_option": {
         "enable_activate_at_next_reboot": False,
-        "activation_delay_seconds": 0,
-        "activation_time": 0
+        "activation_delay_seconds": 0
         }
     }
     })
