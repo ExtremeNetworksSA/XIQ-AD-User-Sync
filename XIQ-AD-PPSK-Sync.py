@@ -24,6 +24,7 @@ from email import encoders
 #               - Delta Push Config for local DB
 #           2.1.1.3 - 2026-04-30
 #               - removed unneeded parameters from config push API call
+#               - added additional logging for deployment API call
 ####################################
 ####################################
 
@@ -298,6 +299,16 @@ def configPushToDevices(device_id_list):
     })
     response = requests.post(url, headers=headers, data=payload, verify=True)
     # wait 60 seconds
+    if response is None:
+        log_msg = "Error Error Deploying config to devices in XI XIQ - no response!"
+        logging.error(log_msg)
+        raise TypeError(log_msg)
+    elif response.status_code != 202:
+        log_msg = f"Error Deploying config to devices in XIQ - HTTP Status Code: {str(response.status_code)}"
+        logging.error(log_msg)
+        logging.warning(f"\t\t{response.json()}")
+        log_msg += json.dumps(response.json())
+        raise TypeError(log_msg)
     wait_time = 60
     print(f"waiting {wait_time} seconds for configuration push to start.")
     time.sleep(wait_time)
